@@ -1,0 +1,19 @@
+{
+  "name": "websocket-test",
+  "version": "1.0.0",
+  "description": "WebSocket connection test tool for testing connections between two devices",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "start:python": "python3 server.py"
+  },
+  "keywords": [
+    "websocket",
+    "test",
+    "network",
+    "chat"
+  ],
+  "dependencies": {
+    "ws": "^8.19.0"
+  }
+}

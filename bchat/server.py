@@ -56,7 +56,7 @@ async def handler(websocket, path):
     except websockets.exceptions.ConnectionClosed:
         pass
     finally:
-        clients.remove(websocket)
+        clients.discard(websocket)
         print(f"❌ Client #{client_id} disconnected")
         print(f"   Total clients: {len(clients)}")
 

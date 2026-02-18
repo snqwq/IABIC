@@ -14,6 +14,7 @@ clients = set()
 client_counter = 0
 
 async def handler(websocket, path):
+    # path parameter is required by websockets.serve but not used in this simple handler
     global client_counter
     client_counter += 1
     client_id = client_counter

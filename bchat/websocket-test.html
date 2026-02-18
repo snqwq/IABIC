@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Connection Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 30px;
+        }
+        
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .mode-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+        
+        .mode-btn {
+            padding: 12px 24px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .mode-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        .mode-btn.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .panel {
+            display: none;
+            animation: fadeIn 0.3s;
+        }
+        
+        .panel.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .input-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 600;
+        }
+        
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        button {
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s;
+            width: 100%;
+        }
+        
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .status {
+            padding: 12px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-weight: 600;
+            text-align: center;
+        }
+        
+        .status.disconnected {
+            background: #fee;
+            color: #c33;
+        }
+        
+        .status.connected {
+            background: #efe;
+            color: #3c3;
+        }
+        
+        .status.connecting {
+            background: #ffe;
+            color: #cc6;
+        }
+        
+        .chat-area {
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .chat-area.active {
+            display: block;
+        }
+        
+        .messages {
+            height: 300px;
+            overflow-y: auto;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            background: #f9f9f9;
+        }
+        
+        .message {
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+        
+        .message.sent {
+            background: #667eea;
+            color: white;
+            margin-left: auto;
+            text-align: right;
+        }
+        
+        .message.received {
+            background: #e9ecef;
+            color: #333;
+        }
+        
+        .message-time {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-top: 4px;
+        }
+        
+        .input-row {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .input-row input {
+            flex: 1;
+        }
+        
+        .input-row button {
+            width: auto;
+            padding: 12px 20px;
+        }
+        
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .info-box strong {
+            display: block;
+            margin-bottom: 8px;
+            color: #1976d2;
+        }
+        
+        .info-box code {
+            background: #fff;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #d32f2f;
+        }
+        
+        .server-info {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 13px;
+        }
+        
+        .server-info strong {
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔌 WebSocket Connection Test</h1>
+        <p class="subtitle">Test WebSocket connections between two devices on the same network</p>
+        
+        <div class="mode-selector">
+            <button class="mode-btn active" onclick="switchMode('server')">Server Mode</button>
+            <button class="mode-btn" onclick="switchMode('client')">Client Mode</button>
+        </div>
+        
+        <!-- Server Mode Panel -->
+        <div id="serverPanel" class="panel active">
+            <div class="info-box">
+                <strong>📡 Server Mode Instructions:</strong>
+                This mode requires a WebSocket server. You have two options:
+                <br><br>
+                <strong>Option 1: Use Node.js (Recommended)</strong><br>
+                1. Install Node.js and run: <code>npm install -g ws</code><br>
+                2. Create a file <code>server.js</code> with the code shown below<br>
+                3. Run: <code>node server.js</code><br>
+                4. Note your device's IP address<br>
+                5. Open this HTML file on the server device and switch to Client mode<br>
+                6. Connect to <code>ws://localhost:8080</code><br>
+                <br>
+                <strong>Option 2: Use Python</strong><br>
+                1. Install: <code>pip install websockets</code><br>
+                2. Use the Python server code shown below<br>
+                3. Run: <code>python server.py</code>
+            </div>
+            
+            <div class="server-info">
+                <strong>Node.js Server Code (server.js):</strong>
+                <pre style="background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 8px; overflow-x: auto; margin-top: 10px;">const WebSocket = require('ws');
+const server = new WebSocket.Server({ port: 8080 });
+
+console.log('WebSocket server running on port 8080');
+console.log('Connect from clients using: ws://YOUR_IP:8080');
+
+server.on('connection', (ws) => {
+    console.log('Client connected');
+    
+    ws.on('message', (message) => {
+        console.log('Received:', message.toString());
+        // Broadcast to all clients
+        server.clients.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN) {
+                client.send(message.toString());
+            }
+        });
+    });
+    
+    ws.on('close', () => {
+        console.log('Client disconnected');
+    });
+});</pre>
+            </div>
+            
+            <div class="server-info" style="margin-top: 10px;">
+                <strong>Python Server Code (server.py):</strong>
+                <pre style="background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 8px; overflow-x: auto; margin-top: 10px;">import asyncio
+import websockets
+
+clients = set()
+
+async def handler(websocket):
+    clients.add(websocket)
+    print(f"Client connected. Total clients: {len(clients)}")
+    try:
+        async for message in websocket:
+            print(f"Received: {message}")
+            # Broadcast to all clients
+            websockets.broadcast(clients, message)
+    finally:
+        clients.remove(websocket)
+        print(f"Client disconnected. Total clients: {len(clients)}")
+
+async def main():
+    async with websockets.serve(handler, "0.0.0.0", 8080):
+        print("WebSocket server running on port 8080")
+        await asyncio.Future()
+
+asyncio.run(main())</pre>
+            </div>
+            
+            <button onclick="switchMode('client')" style="margin-top: 20px;">
+                Switch to Client Mode to Connect →
+            </button>
+        </div>
+        
+        <!-- Client Mode Panel -->
+        <div id="clientPanel" class="panel">
+            <div class="info-box">
+                <strong>💻 Client Mode Instructions:</strong>
+                1. Make sure a WebSocket server is running (see Server Mode for setup)<br>
+                2. Enter the server's IP address and port below<br>
+                3. For same device: <code>ws://localhost:8080</code><br>
+                4. For other device on network: <code>ws://192.168.x.x:8080</code> (replace with actual IP)<br>
+                5. Click Connect and start chatting!<br>
+                <br>
+                💡 <strong>Tip:</strong> Open this file on multiple devices and connect them all to the same server to test multi-device communication.
+            </div>
+            
+            <div class="input-group">
+                <label for="serverUrl">WebSocket Server URL:</label>
+                <input type="text" id="serverUrl" placeholder="ws://192.168.1.100:8080" value="ws://localhost:8080">
+            </div>
+            
+            <div id="status" class="status disconnected">
+                ❌ Disconnected
+            </div>
+            
+            <button id="connectBtn" onclick="connect()">
+                🔌 Connect to Server
+            </button>
+            
+            <button id="disconnectBtn" onclick="disconnect()" style="display: none; background: #dc3545; margin-top: 10px;">
+                🔌 Disconnect
+            </button>
+            
+            <div id="chatArea" class="chat-area">
+                <div id="messages" class="messages"></div>
+                <div class="input-row">
+                    <input type="text" id="messageInput" placeholder="Type your message..." onkeypress="handleKeyPress(event)">
+                    <button onclick="sendMessage()">📤 Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let ws = null;
+        let currentMode = 'server';
+        
+        function switchMode(mode) {
+            currentMode = mode;
+            
+            // Update button states
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if ((mode === 'server' && btn.textContent.includes('Server Mode')) ||
+                    (mode === 'client' && btn.textContent.includes('Client Mode'))) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            // Update panels
+            document.getElementById('serverPanel').classList.remove('active');
+            document.getElementById('clientPanel').classList.remove('active');
+            
+            if (mode === 'server') {
+                document.getElementById('serverPanel').classList.add('active');
+            } else {
+                document.getElementById('clientPanel').classList.add('active');
+            }
+            
+            // Disconnect if switching modes
+            if (ws) {
+                disconnect();
+            }
+        }
+        
+        function updateStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = 'status ' + type;
+        }
+        
+        function connect() {
+            const serverUrl = document.getElementById('serverUrl').value.trim();
+            
+            if (!serverUrl) {
+                alert('Please enter a server URL');
+                return;
+            }
+            
+            if (!serverUrl.startsWith('ws://') && !serverUrl.startsWith('wss://')) {
+                alert('Server URL must start with ws:// or wss://');
+                return;
+            }
+            
+            updateStatus('🔄 Connecting...', 'connecting');
+            
+            try {
+                ws = new WebSocket(serverUrl);
+                
+                ws.onopen = function() {
+                    updateStatus('✅ Connected', 'connected');
+                    document.getElementById('connectBtn').style.display = 'none';
+                    document.getElementById('disconnectBtn').style.display = 'block';
+                    document.getElementById('chatArea').classList.add('active');
+                    document.getElementById('serverUrl').disabled = true;
+                    
+                    addSystemMessage('Connected to server');
+                };
+                
+                ws.onmessage = function(event) {
+                    addMessage(event.data, 'received');
+                };
+                
+                ws.onerror = function(error) {
+                    console.error('WebSocket error:', error);
+                    updateStatus('❌ Connection error', 'disconnected');
+                    addSystemMessage('Connection error occurred');
+                };
+                
+                ws.onclose = function() {
+                    updateStatus('❌ Disconnected', 'disconnected');
+                    document.getElementById('connectBtn').style.display = 'block';
+                    document.getElementById('disconnectBtn').style.display = 'none';
+                    document.getElementById('serverUrl').disabled = false;
+                    
+                    addSystemMessage('Disconnected from server');
+                    ws = null;
+                };
+            } catch (error) {
+                updateStatus('❌ Connection failed', 'disconnected');
+                alert('Failed to connect: ' + error.message);
+            }
+        }
+        
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        }
+        
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (!message) {
+                return;
+            }
+            
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                alert('Not connected to server');
+                return;
+            }
+            
+            try {
+                ws.send(message);
+                addMessage(message, 'sent');
+                input.value = '';
+                input.focus();
+            } catch (error) {
+                alert('Failed to send message: ' + error.message);
+            }
+        }
+        
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+        
+        function addMessage(text, type) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message ' + type;
+            
+            const textDiv = document.createElement('div');
+            textDiv.textContent = text;
+            
+            const timeDiv = document.createElement('div');
+            timeDiv.className = 'message-time';
+            timeDiv.textContent = new Date().toLocaleTimeString();
+            
+            messageDiv.appendChild(textDiv);
+            messageDiv.appendChild(timeDiv);
+            messagesDiv.appendChild(messageDiv);
+            
+            // Auto-scroll to bottom
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+        
+        function addSystemMessage(text) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.style.textAlign = 'center';
+            messageDiv.style.color = '#999';
+            messageDiv.style.fontSize = '12px';
+            messageDiv.style.margin = '10px 0';
+            messageDiv.textContent = '• ' + text + ' •';
+            messagesDiv.appendChild(messageDiv);
+            
+            // Auto-scroll to bottom
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+        
+        // Get local IP address hint
+        window.addEventListener('load', function() {
+            const rtc = new RTCPeerConnection({iceServers:[]});
+            rtc.createDataChannel('');
+            rtc.createOffer().then(offer => rtc.setLocalDescription(offer));
+            
+            rtc.onicecandidate = function(evt) {
+                if (evt.candidate) {
+                    const ip = /([0-9]{1,3}(\.[0-9]{1,3}){3})/.exec(evt.candidate.candidate);
+                    // Filter out invalid (0.0.0.0) and loopback (127.x.x.x) addresses
+                    if (ip && ip[1] && ip[1] !== '0.0.0.0' && !ip[1].startsWith('127.')) {
+                        console.log('Detected local IP:', ip[1]);
+                        
+                        const infoBox = document.querySelector('.info-box');
+                        if (infoBox && currentMode === 'client') {
+                            const ipHint = document.createElement('div');
+                            ipHint.style.marginTop = '10px';
+                            ipHint.style.padding = '10px';
+                            ipHint.style.background = '#fff';
+                            ipHint.style.borderRadius = '4px';
+                            ipHint.innerHTML = '<strong>💡 Your IP appears to be:</strong> <code>' + ip[1] + '</code>';
+                            infoBox.appendChild(ipHint);
+                        }
+                        
+                        rtc.close();
+                    }
+                }
+            };
+        });
+    </script>
+</body>
+</html>
